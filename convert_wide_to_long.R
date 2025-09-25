@@ -231,7 +231,6 @@ convert_wide_to_long <- function(data, id_cols = c("s_id", "tp_id"),
   # 轉回 tibble 格式並排序
   cat("Finalizing results...\n")
   result <- long_dt %>% as_tibble() %>% arrange(across(all_of(id_cols)), feature)
-  
   cat("Complete! Final dataset has", nrow(result), "rows\n")
   cat("Complete! Generated", nrow(result), "rows (including empty values)\n")
   

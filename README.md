@@ -1,6 +1,6 @@
-# My Scripts
-This is my space containing lazy functions for easy coding.......
-In the FUTURE, a lot of useful functions will be provided here.
+# Lazyman Scripts
+這邊是我放資料處理上原本會很煩的步驟，讓他儘量能one-liner解決。  
+2025/09/25開始施工.....
 
 ## Easy data processing
 1. **convert_wide_to_long.R**

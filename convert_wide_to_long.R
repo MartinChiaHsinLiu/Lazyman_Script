@@ -189,6 +189,24 @@ convert_wide_to_long <- function(data, id_cols = c("s_id", "tp_id"),
     # 添加類型信息
     long_dt <- merge(long_dt, type_map, by = "feature", all.x = TRUE)
     
+    # 根據參數決定是否移除沒有資訊的行
+    if (remove_empty) {
+      cat("Removing rows with no information (NA, NULL, NaN, empty string)...\n")
+      original_rows <- nrow(long_dt)
+      
+      long_dt <- long_dt %>%
+        filter(
+          !is.na(value) &                    # 移除 NA
+            !is.null(value) &                  # 移除 NULL
+            !(is.numeric(value) & is.nan(value)) &  # 移除 NaN（針對數值型）
+            value != "" &                      # 移除空字串
+            !is.na(as.character(value))        # 移除轉為字元後是 NA 的值
+        )
+      
+      removed_rows <- original_rows - nrow(long_dt)
+      cat("Removed", removed_rows, "rows with no information\n")
+    }
+    
     # 根據類型轉換 value
     cat("Converting values back to original types...\n")
     #long_dt[value_type == "numeric" & !is.na(value) & value != "", value := as.character(as.numeric(value))]
@@ -205,40 +223,20 @@ convert_wide_to_long <- function(data, id_cols = c("s_id", "tp_id"),
     # 使用 mapply 進行轉換並新增為新的 list-column 'new_value'
     long_dt[, new_value := mapply(type_converter, value, value_type, SIMPLIFY = FALSE)]
     long_dt <- long_dt %>% dplyr::select(-value) %>% dplyr::rename(value=new_value)
-     
+    
     # 移除類型欄位（保持簡潔）
     #long_dt[, value_type := NULL]
   }
   
   # 轉回 tibble 格式並排序
   cat("Finalizing results...\n")
-  result <- long_dt %>%
-    as_tibble() %>%
-    arrange(across(all_of(id_cols)), feature)
-  
-  # 根據參數決定是否移除沒有資訊的行
-  if (remove_empty) {
-    cat("Removing rows with no information (NA, NULL, NaN, empty string)...\n")
-    original_rows <- nrow(result)
-    
-    result <- result %>%
-      filter(
-        !is.na(value) &                    # 移除 NA
-          !is.null(value) &                  # 移除 NULL
-          !(is.numeric(value) & is.nan(value)) &  # 移除 NaN（針對數值型）
-          value != "" &                      # 移除空字串
-          !is.na(as.character(value))        # 移除轉為字元後是 NA 的值
-      )
-    
-    removed_rows <- original_rows - nrow(result)
-    cat("Removed", removed_rows, "rows with no information\n")
-    cat("Complete! Final dataset has", nrow(result), "rows\n")
-  } else {
-    cat("Complete! Generated", nrow(result), "rows (including empty values)\n")
-  }
+  result <- long_dt %>% as_tibble() %>% arrange(across(all_of(id_cols)), feature)
+  cat("Complete! Final dataset has", nrow(result), "rows\n")
+  cat("Complete! Generated", nrow(result), "rows (including empty values)\n")
   
   return(result)
 }
+
 
 
 sample_data <- data.frame(

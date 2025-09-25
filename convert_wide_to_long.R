@@ -128,75 +128,86 @@ convert_wide_to_long <- function(data, id_cols = c("s_id", "tp_id"),
     )
     
   } else {
-    # 保留類型：分別處理不同類型的欄位
-    cat("Performing type-preserving conversion...\n")
+    # 保留類型：但由於 R 的限制，同一個 value 欄位無法容納不同類型
+    # 我們將所有值轉為字符型，但添加一個 value_type 欄位來記錄原始類型
+    cat("Performing type-preserving conversion with type annotation...\n")
     
-    # 分類欄位
-    numeric_cols <- character(0)
-    character_cols <- character(0)
-    logical_cols <- character(0)
+    # 添加類型信息欄位
+    dt_with_type <- copy(dt)
     
+    # 為每個 feature 添加其數據類型信息
     for (col in value_cols) {
-      if (is.factor(dt[[col]])) {
-        dt[, (col) := as.character(get(col))]
-        character_cols <- c(character_cols, col)
-      } else if (is.logical(dt[[col]])) {
-        logical_cols <- c(logical_cols, col)
-      } else if (is.numeric(dt[[col]])) {
-        numeric_cols <- c(numeric_cols, col)
+      if (is.factor(dt_with_type[[col]])) {
+        dt_with_type[, paste0(col, "_type") := "character"]
+        dt_with_type[, (col) := as.character(get(col))]
+      } else if (is.logical(dt_with_type[[col]])) {
+        dt_with_type[, paste0(col, "_type") := "logical"]
+      } else if (is.numeric(dt_with_type[[col]])) {
+        dt_with_type[, paste0(col, "_type") := "numeric"]  
       } else {
-        character_cols <- c(character_cols, col)
+        dt_with_type[, paste0(col, "_type") := "character"]
       }
     }
     
-    cat("Numeric columns:", length(numeric_cols), "\n")
-    cat("Character columns:", length(character_cols), "\n")  
-    cat("Logical columns:", length(logical_cols), "\n")
+    # 創建類型映射
+    type_map <- data.table()
+    for (col in value_cols) {
+      col_type <- if (is.factor(data[[col]])) {
+        "character"
+      } else if (is.logical(data[[col]])) {
+        "logical"
+      } else if (is.numeric(data[[col]])) {
+        "numeric"
+      } else {
+        "character"
+      }
+      
+      type_map <- rbind(type_map, 
+                        data.table(feature = col, value_type = col_type))
+    }
     
-    # 分別 melt 不同類型的欄位
-    result_list <- list()
+    cat("Detected types:\n")
+    type_summary <- type_map[, .N, by = value_type]
+    for (i in seq_len(nrow(type_summary))) {
+      cat(" ", type_summary$value_type[i], ":", type_summary$N[i], "features\n")
+    }
     
-    if (length(numeric_cols) > 0) {
-      numeric_dt <- data.table::melt(
-        dt[, .SD, .SDcols = c(id_cols, numeric_cols)],
-        id.vars = id_cols,
-        variable.name = "feature", 
-        value.name = "value",
-        variable.factor = FALSE
+    # 使用 melt，但先將所有值轉為字符型以避免衝突
+    dt_for_melt <- copy(dt)
+    for (col in value_cols) {
+      dt_for_melt[, (col) := as.character(get(col))]
+    }
+    
+    long_dt <- data.table::melt(
+      dt_for_melt,
+      id.vars = id_cols,
+      variable.name = "feature",
+      value.name = "value",
+      variable.factor = FALSE
+    )
+    
+    # 添加類型信息
+    long_dt <- merge(long_dt, type_map, by = "feature", all.x = TRUE)
+    
+    # 根據類型轉換 value
+    cat("Converting values back to original types...\n")
+    #long_dt[value_type == "numeric" & !is.na(value) & value != "", value := as.character(as.numeric(value))]
+    #long_dt[value_type == "logical" & !is.na(value) & value != "", value := as.character(as.logical(value))]
+    type_converter <- function(val, type) {
+      switch(type,
+             numeric = as.numeric(val),
+             logical = as.logical(val),
+             character = as.character(val),
+             as.character(val) # 若無對應型態，則回傳字串
       )
-      result_list <- append(result_list, list(numeric_dt))
     }
     
-    if (length(character_cols) > 0) {
-      character_dt <- data.table::melt(
-        dt[, .SD, .SDcols = c(id_cols, character_cols)],
-        id.vars = id_cols,
-        variable.name = "feature",
-        value.name = "value", 
-        variable.factor = FALSE
-      )
-      result_list <- append(result_list, list(character_dt))
-    }
-    
-    if (length(logical_cols) > 0) {
-      logical_dt <- data.table::melt(
-        dt[, .SD, .SDcols = c(id_cols, logical_cols)],
-        id.vars = id_cols,
-        variable.name = "feature",
-        value.name = "value",
-        variable.factor = FALSE
-      )
-      result_list <- append(result_list, list(logical_dt))
-    }
-    
-    # 合併結果
-    if (length(result_list) > 1) {
-      long_dt <- data.table::rbindlist(result_list)
-    } else if (length(result_list) == 1) {
-      long_dt <- result_list[[1]]
-    } else {
-      stop("No columns found to convert")
-    }
+    # 使用 mapply 進行轉換並新增為新的 list-column 'new_value'
+    long_dt[, new_value := mapply(type_converter, value, value_type, SIMPLIFY = FALSE)]
+    long_dt <- long_dt %>% dplyr::select(-value) %>% dplyr::rename(value=new_value)
+     
+    # 移除類型欄位（保持簡潔）
+    #long_dt[, value_type := NULL]
   }
   
   # 轉回 tibble 格式並排序
@@ -229,13 +240,14 @@ convert_wide_to_long <- function(data, id_cols = c("s_id", "tp_id"),
   return(result)
 }
 
+
 sample_data <- data.frame(
     s_id = c("ICGC-BLCA-DO48360", "ICGC-BLCA-DO48361", "ICGC-BLCA-DO48362"),
     tp_id = c("TP_034", "TP_034", "TP_034"),
     cancer_type_abbr = c("BLCA", "BLCA", "BLCA"),
     age_at_diagnosis = c(52, 25, 69),
-    days_to_last_followup = c(NA, NA, NA),
+    days_to_last_followup = c(10, 20, 30),
     gender = c("male", "male", "female"),
-    include_in_driverdbv4 = c(TRUE, FALSE, TRUE),
+    include_in_study = c(TRUE, FALSE, TRUE),
     stringsAsFactors = FALSE
 )

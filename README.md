@@ -7,7 +7,7 @@
 這2個function可以把你的寬表直接變成長表 or _vice verse_。  
 只要指定**id_cols**，就可以把除了指定的ID columns外都拉下去。  
 可以選擇要不要把沒有資訊的部份刪除，適合用在sparsity很高的資料。
-出來的結果value column會是list type，以容納各種類型的type。  
+出來的結果value column會分成numeric, characteristics, logic，以容納各種類型的type，並且有一個data_type column提醒讓你不要抓錯。  
 ```R
 tmp <- convert_wide_to_long(data, id_cols = c("YOUR ID COLUMNS in a VECTOR"), remove_empty = TRUE)
 as.data.frame(tmp)

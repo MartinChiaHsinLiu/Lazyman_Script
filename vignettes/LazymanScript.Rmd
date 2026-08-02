@@ -1,0 +1,76 @@
+---
+title: "Introduction to LazymanScript"
+author: "Dr. Chia-Hsin Liu"
+date: "`r Sys.Date()`"
+output: BiocStyle::html_document
+vignette: >
+  %\VignetteIndexEntry{Introduction to LazymanScript}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(LazymanScript)
+```
+
+## Introduction
+
+`LazymanScript` provides robust utility functions to seamlessly convert clinical data tables between wide and long formats. Unlike standard pivot functions, `LazymanScript` preserves exact data types (numeric, character, logical) during transformations, making it ideal for messy biomedical datasets. It also includes a robust identity checker to verify that data integrity is maintained during these transformations.
+
+## 1. Converting Wide Data to Long Data
+
+Often, clinical datasets are wide (one row per patient/timepoint). We can convert them to a long format that stores the variable type explicitly.
+
+```{r wide-to-long}
+# Create sample wide data
+df <- data.frame(
+  s_id = c(1, 2),
+  tp_id = c("A", "B"),
+  age = c(25, 30),
+  name = c("John", "Jane"),
+  active = c(TRUE, FALSE)
+)
+
+print(df)
+
+# Convert to long
+long_df <- convert_wide_to_long(df, id_cols = c("s_id", "tp_id"))
+print(long_df)
+```
+
+As you can see, the `convert_wide_to_long` function creates three specific value columns (`value_num`, `value_char`, `value_logic`) and explicitly notes the `value_type` for each feature.
+
+## 2. Restoring Long Data to Wide Data
+
+When you need to pivot back to a wide format for statistical modeling, `LazymanScript` automatically restores the correct R data types based on the `value_type` column!
+
+```{r long-to-wide}
+restored_df <- convert_long_to_wide(long_df, id_cols = c("s_id", "tp_id"))
+
+# Reorder columns to match the original dataframe (since dcast sorts them alphabetically)
+restored_df <- restored_df[, names(df)]
+
+print(restored_df)
+
+# Check the restored types
+str(restored_df)
+```
+
+## 3. Verifying Data Integrity
+
+To ensure that zero data loss or type coercion occurred during your workflow, you can use the `check_data_identity` function.
+
+```{r check-identity}
+# Compare the original dataframe with the restored dataframe
+result <- check_data_identity(df, restored_df)
+
+# Check if they are identical
+print(result$identical)
+```
+
+If any columns were dropped, rows were misaligned, or data types were coerced (e.g., numeric to character), the identity checker will flag it as `FAIL` and list the exact issues.
+

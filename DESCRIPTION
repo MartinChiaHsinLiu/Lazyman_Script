@@ -1,0 +1,22 @@
+Package: LazymanScript
+Title: Data Conversion and Identity Checking Utilities
+Version: 0.1.0
+Authors@R: person("Dr. Chia-Hsin", "Liu", email = "martin@example.com", role = c("aut", "cre"))
+Description: Provides utility functions to seamlessly convert clinical data tables between wide and long formats while preserving exact data types (numeric, character, logical). It also includes a robust identity checker to verify that data integrity is maintained during transformations.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+biocViews: DataImport, DataRepresentation, Software
+Imports:
+    dplyr,
+    tidyr,
+    stats,
+    data.table
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    BiocStyle
+VignetteBuilder: knitr
+Config/testthat/edition: 3

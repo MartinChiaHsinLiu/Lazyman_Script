@@ -55,6 +55,7 @@
 #' @import data.table
 #' @import dplyr
 #' @import tidyr
+#' @importFrom stats as.formula
 convert_long_to_wide <- function(data, id_cols = c("s_id", "tp_id")) {
   check_packages_for_wide()
   validate_long_format(data, id_cols)

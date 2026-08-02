@@ -11,7 +11,7 @@ You can install the development version of LazymanScript directly from GitHub us
 if (!require(devtools)) install.packages("devtools")
 
 # Install LazymanScript from GitHub
-devtools::install_github("MartinChiaHsinLiu/Lazyman_Script")
+devtools::install_github("MartinChiaHsinLiu/Lazyman_Script", build_vignettes = TRUE)
 ```
 
 ## Usage and Documentation

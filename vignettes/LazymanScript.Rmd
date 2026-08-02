@@ -26,20 +26,51 @@ library(LazymanScript)
 Often, clinical datasets are wide (one row per patient/timepoint). We can convert them to a long format that stores the variable type explicitly.
 
 ```{r wide-to-long}
-# Create sample wide data
-df <- data.frame(
-  s_id = c(1, 2),
-  tp_id = c("A", "B"),
-  age = c(25, 30),
-  name = c("John", "Jane"),
-  active = c(TRUE, FALSE)
-)
+# Create complex sample wide data (150 rows, 25 columns)
+set.seed(123)
+n_rows <- 150
 
-print(df)
+df <- data.frame(
+  s_id = 1:n_rows,
+  tp_id = sample(c("Baseline", "Week_12", "Week_24"), n_rows, replace = TRUE),
+  age = sample(20:80, n_rows, replace = TRUE),
+  gender = sample(c("Male", "Female"), n_rows, replace = TRUE),
+  active_smoker = sample(c(TRUE, FALSE, NA), n_rows, replace = TRUE, prob = c(0.2, 0.7, 0.1)),
+  height_cm = rnorm(n_rows, mean = 170, sd = 10),
+  weight_kg = rnorm(n_rows, mean = 70, sd = 15),
+  bmi = numeric(n_rows),
+  blood_pressure_systolic = rnorm(n_rows, mean = 120, sd = 15),
+  blood_pressure_diastolic = rnorm(n_rows, mean = 80, sd = 10),
+  heart_rate = sample(60:100, n_rows, replace = TRUE),
+  cholesterol = rnorm(n_rows, mean = 200, sd = 30),
+  glucose = rnorm(n_rows, mean = 95, sd = 10),
+  wbc = rnorm(n_rows, mean = 7.5, sd = 2.0),
+  hemoglobin = rnorm(n_rows, mean = 14, sd = 1.5),
+  platelets = sample(150:400, n_rows, replace = TRUE),
+  symptom_fatigue = sample(c(TRUE, FALSE), n_rows, replace = TRUE),
+  symptom_nausea = sample(c(TRUE, FALSE), n_rows, replace = TRUE),
+  treatment_group = sample(c("Control", "Treatment_A", "Treatment_B"), n_rows, replace = TRUE),
+  prior_medication = sample(c("Drug_X", "Drug_Y", "None", NA), n_rows, replace = TRUE),
+  notes = sample(c("Patient feels well", "Mild headache reported", NA), n_rows, replace = TRUE),
+  protocol_deviation = sample(c(TRUE, FALSE), n_rows, replace = TRUE, prob = c(0.05, 0.95)),
+  # Columns with all NAs to test edge cases
+  dropped_lab_test = rep(NA_real_, n_rows),
+  missing_string_data = rep(NA_character_, n_rows),
+  unused_flag = rep(NA, n_rows) # Logical NA
+)
+df$bmi <- df$weight_kg / (df$height_cm / 100)^2
+
+# Introduce some random NAs to numeric columns
+df$cholesterol[sample(1:n_rows, 15)] <- NA
+
+# Preview the wide data structure
+str(df)
 
 # Convert to long
 long_df <- convert_wide_to_long(df, id_cols = c("s_id", "tp_id"))
-print(long_df)
+
+# View the head of the long data
+head(long_df, 15)
 ```
 
 As you can see, the `convert_wide_to_long` function creates three specific value columns (`value_num`, `value_char`, `value_logic`) and explicitly notes the `value_type` for each feature.
@@ -54,7 +85,8 @@ restored_df <- convert_long_to_wide(long_df, id_cols = c("s_id", "tp_id"))
 # Reorder columns to match the original dataframe (since dcast sorts them alphabetically)
 restored_df <- restored_df[, names(df)]
 
-print(restored_df)
+# View the head of the restored data
+head(restored_df, 15)
 
 # Check the restored types
 str(restored_df)

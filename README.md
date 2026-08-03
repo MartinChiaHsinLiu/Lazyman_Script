@@ -9,9 +9,9 @@ You can install the development version of LazymanScript directly from GitHub us
 ```R
 # Install devtools if you haven't already
 if (!require(devtools)) install.packages("devtools")
-install.packages("pandoc")
+if (!require(pandoc)) install.packages("pandoc")
 # or 
-install.packages("rmarkdown")
+if (!require(rmarkdown)) install.packages("rmarkdown")
 rmarkdown::pandoc_available()
 # Install LazymanScript from GitHub
 devtools::install_github("MartinChiaHsinLiu/Lazyman_Script", build_vignettes = TRUE)

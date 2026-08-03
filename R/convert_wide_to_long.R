@@ -1,5 +1,5 @@
 #' Convert Wide Table to Long Table with Type-Specific Columns
-#'
+#' 
 #' @description
 #' Converts a wide format data table to long format while preserving data types
 #' in separate columns (value_num, value_char, value_logic). Each row will have

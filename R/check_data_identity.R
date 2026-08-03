@@ -1,5 +1,5 @@
 #' Check Identity Between Original and Restored Data
-#'
+#' 
 #' @description
 #' Validates whether data restored from long format is identical to the original
 #' wide format data. This function checks dimensions, column names, column types,
